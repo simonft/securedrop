@@ -4,6 +4,21 @@ set -eu
 
 TOPLEVEL=$(git rev-parse --show-toplevel)
 
+function docker_image_circle() {
+    local out
+    out="$(mktemp)"
+    ( cat Dockerfile ; echo COPY . . ) > circle.docker
+    if ! docker build -t securedrop-admin -f circle.docker . >& "$out" ; then
+        cat "$out"
+        return 1
+    fi
+    return 0
+}
+
+function docker_run_circle() {
+    docker run --rm -ti securedrop-admin "$@"
+}
+
 function docker_image() {
     local out
     out="$(mktemp)"
@@ -26,5 +41,10 @@ function docker_run() {
 	   -ti securedrop-admin "$@"
 }
 
-docker_image
-docker_run "$@"
+if test -n "$CIRCLE_SHA1" ; then
+   docker_image_circle
+   docker_run_circle "$@"
+else
+   docker_image
+   docker_run "$@"
+fi
