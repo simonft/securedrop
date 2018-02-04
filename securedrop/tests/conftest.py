@@ -1,16 +1,24 @@
 # -*- coding: utf-8 -*-
+
+import gnupg
+import imp
+import logging
 import os
+import psutil
+import pytest
 import shutil
 import signal
 import subprocess
-import logging
 
-import gnupg
-import psutil
-import pytest
+from copy import copy
+from os import path
 
 os.environ['SECUREDROP_ENV'] = 'test'  # noqa
-import config
+import config as original_config
+
+from db import db
+from source_app import create_app as create_source_app
+
 
 # TODO: the PID file for the redis worker is hard-coded below.
 # Ideally this constant would be provided by a test harness.
@@ -44,11 +52,33 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture(scope='session')
-def setUptearDown():
-    _start_test_rqworker(config)
+def setUpTearDown():
+    _start_test_rqworker(original_config)
     yield
     _stop_test_rqworker()
-    _cleanup_test_securedrop_dataroot(config)
+    _cleanup_test_securedrop_dataroot(original_config)
+
+
+@pytest.fixture(scope='function')
+def config(tmpdir):
+    '''Clone the module so we can modify it per test.
+       Note: If we change *anything* else here, we need to de-spaghetti the
+       rest of the code because we still do `import config` everywhere, and
+       not dependency injection. That breaks this fixture.
+    '''
+
+    c = imp.load_module('c', *imp.find_module('config'))
+    c.SECUREDROP_DATA_ROOT = tmpdirs
+    return c
+
+
+@pytest.fixture(scope='function')
+def source_app(config):
+    app = create_source_app(config)
+    with app.app_context():
+        db.create_all()
+
+    return app
 
 
 def _start_test_rqworker(config):

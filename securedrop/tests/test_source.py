@@ -1,23 +1,37 @@
 # -*- coding: utf-8 -*-
-from cStringIO import StringIO
 import gzip
-from mock import patch, ANY
 import re
+import unittest
 
+from cStringIO import StringIO
 from flask import session, escape, url_for
 from flask_testing import TestCase
+from mock import patch, ANY
+
 
 import crypto_util
-from db import db
-from models import Source
 import source
 import version
 import utils
 import json
 import config
+
+from db import db
+from models import Source
 from utils.db_helper import new_codename
+from utils.instrument import InstrumentedApp
 
 overly_long_codename = 'a' * (Source.MAX_CODENAME_LEN + 1)
+
+
+class TestPytestSourceApp:
+
+    def test_page_not_found(self, source_app):
+        with InstrumentedApp(source_app) as ins:
+            with source_app.test_client() as app:
+                resp = app.get('UNKNOWN')
+                assert resp.status_code == 404
+                ins.assert_template_used('notfound.html')
 
 
 class TestSourceApp(TestCase):
