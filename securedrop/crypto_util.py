@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from base64 import b32encode
+import gnupg
 import os
+import scrypt
 import subprocess
 
+from base64 import b32encode
 from Cryptodome.Random import random
-import gnupg
+from flask import current_app
 from gnupg._util import _is_stream, _make_binary_stream
-import scrypt
 
 import config
-import store
 
 # to fix gpg error #78 on production
 os.environ['USERNAME'] = 'www-data'
@@ -180,7 +180,7 @@ def getkey(name):
 def encrypt(plaintext, fingerprints, output=None):
     # Verify the output path
     if output:
-        store.verify(output)
+        current_app.storage.verify(output)
 
     if not isinstance(fingerprints, (list, tuple)):
         fingerprints = [fingerprints, ]
