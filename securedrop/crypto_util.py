@@ -213,8 +213,3 @@ def decrypt(secret, ciphertext):
     """
     hashed_codename = hash_codename(secret, salt=SCRYPT_GPG_PEPPER)
     return gpg.decrypt(ciphertext, passphrase=hashed_codename).data
-
-
-if __name__ == "__main__":  # pragma: no cover
-    import doctest
-    doctest.testmod()
